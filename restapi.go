@@ -44,8 +44,8 @@ func (s *Session) Request(method, urlStr string, data interface{}) (response []b
 	return s.RequestWithBucketID(method, urlStr, data, strings.SplitN(urlStr, "?", 2)[0])
 }
 
-// RequestWithBucketID makes a (GET/POST/...) Requests to Discord REST API with JSON data.
-func (s *Session) RequestWithBucketID(method, urlStr string, data interface{}, bucketID string) (response []byte, err error) {
+// RequestWithBucketIDAndCustomHeaders makes a (GET/POST/...) Reauests to Discord REST API with JSON data and supports custom headers
+func (s *Session) RequestWithBucketIDAndCustomHeaders(method, urlStr string, data interface{}, bucketID string, headers map[string]string) (response []byte, err error) {
 	var body []byte
 	if data != nil {
 		body, err = json.Marshal(data)
@@ -54,21 +54,31 @@ func (s *Session) RequestWithBucketID(method, urlStr string, data interface{}, b
 		}
 	}
 
-	return s.request(method, urlStr, "application/json", body, bucketID, 0)
+	return s.requestComplex(method, urlStr, "application/json", body, bucketID, 0, headers)
+}
+
+// RequestWithBucketID makes a (GET/POST/...) Requests to Discord REST API with JSON data.
+func (s *Session) RequestWithBucketID(method, urlStr string, data interface{}, bucketID string) (response []byte, err error) {
+	return s.RequestWithBucketIDAndCustomHeaders(method, urlStr, data, bucketID, map[string]string{})
 }
 
 // request makes a (GET/POST/...) Requests to Discord REST API.
 // Sequence is the sequence number, if it fails with a 502 it will
 // retry with sequence+1 until it either succeeds or sequence >= session.MaxRestRetries
-func (s *Session) request(method, urlStr, contentType string, b []byte, bucketID string, sequence int) (response []byte, err error) {
+func (s *Session) requestComplex(method, urlStr, contentType string, b []byte, bucketID string, sequence int, headers map[string]string) (response []byte, err error) {
 	if bucketID == "" {
 		bucketID = strings.SplitN(urlStr, "?", 2)[0]
 	}
-	return s.RequestWithLockedBucket(method, urlStr, contentType, b, s.Ratelimiter.LockBucket(bucketID), sequence)
+	return s.RequestWithLockedBucketComplex(method, urlStr, contentType, b, s.Ratelimiter.LockBucket(bucketID), sequence, headers)
+}
+
+// For backwards compatibility, its requestComplex without supporting headers
+func (s *Session) request(method, urlStr, contentType string, b []byte, bucketID string, sequence int) (response []byte, err error) {
+	return s.requestComplex(method, urlStr, contentType, b, bucketID, sequence, map[string]string{})
 }
 
 // RequestWithLockedBucket makes a request using a bucket that's already been locked
-func (s *Session) RequestWithLockedBucket(method, urlStr, contentType string, b []byte, bucket *Bucket, sequence int) (response []byte, err error) {
+func (s *Session) RequestWithLockedBucketComplex(method, urlStr, contentType string, b []byte, bucket *Bucket, sequence int, headers map[string]string) (response []byte, err error) {
 	if s.Debug {
 		log.Printf("API REQUEST %8s :: %s\n", method, urlStr)
 		log.Printf("API REQUEST  PAYLOAD :: [%s]\n", string(b))
@@ -94,6 +104,10 @@ func (s *Session) RequestWithLockedBucket(method, urlStr, contentType string, b 
 
 	// TODO: Make a configurable static variable.
 	req.Header.Set("User-Agent", s.UserAgent)
+
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
 
 	if s.Debug {
 		for k, v := range req.Header {
@@ -171,6 +185,11 @@ func (s *Session) RequestWithLockedBucket(method, urlStr, contentType string, b 
 	}
 
 	return
+}
+
+// See RequestWithLockedBucket. It's that without the headers
+func (s *Session) RequestWithLockedBucket(method, urlStr, contentType string, b []byte, bucket *Bucket, sequence int) (response []byte, err error) {
+	return s.RequestWithLockedBucketComplex(method, urlStr, contentType, b, bucket, sequence, map[string]string{})
 }
 
 func unmarshal(data []byte, v interface{}) error {
@@ -1794,7 +1813,12 @@ func (s *Session) ChannelInvites(channelID string) (st []*Invite, err error) {
 // channelID   : The ID of a Channel
 // i           : An Invite struct with the values MaxAge, MaxUses and Temporary defined.
 func (s *Session) ChannelInviteCreate(channelID string, i Invite) (st *Invite, err error) {
+	return s.ChannelInviteCreateWithReason(channelID, "", i)
+}
 
+// ChannelInviteCreateWithReason creates a new invite with a audit log reason for the given channel
+// Same arguments as ChannelInviteCreate but with a new reason argument added to it
+func (s *Session) ChannelInviteCreateWithReason(channelID string, reason string, i Invite) (st *Invite, err error) {
 	data := struct {
 		MaxAge    int  `json:"max_age"`
 		MaxUses   int  `json:"max_uses"`
@@ -1802,7 +1826,12 @@ func (s *Session) ChannelInviteCreate(channelID string, i Invite) (st *Invite, e
 		Unique    bool `json:"unique"`
 	}{i.MaxAge, i.MaxUses, i.Temporary, i.Unique}
 
-	body, err := s.RequestWithBucketID("POST", EndpointChannelInvites(channelID), data, EndpointChannelInvites(channelID))
+	var headers map[string]string = make(map[string]string)
+	if reason != "" {
+		headers["X-Audit-Log-Reason"] = reason
+	}
+
+	body, err := s.RequestWithBucketIDAndCustomHeaders("POST", EndpointChannelInvites(channelID), data, EndpointChannelInvites(channelID), headers)
 	if err != nil {
 		return
 	}
