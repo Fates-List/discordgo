@@ -3,3 +3,7 @@
 
 # Environment variables. Useful for examples.
 .env
+
+# Used during patches
+tmp/
+tmp/*
