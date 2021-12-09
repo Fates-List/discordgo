@@ -193,23 +193,28 @@ type ICEServer struct {
 
 // A Invite stores all data related to a specific Discord Guild or Channel invite.
 type Invite struct {
-	Guild          *Guild         `json:"guild"`
-	Channel        *Channel       `json:"channel"`
-	Inviter        *User          `json:"inviter"`
-	Code           string         `json:"code"`
-	CreatedAt      Timestamp      `json:"created_at"`
-	MaxAge         int            `json:"max_age"`
-	Uses           int            `json:"uses"`
-	MaxUses        int            `json:"max_uses"`
-	Revoked        bool           `json:"revoked"`
-	Temporary      bool           `json:"temporary"`
-	Unique         bool           `json:"unique"`
-	TargetUser     *User          `json:"target_user"`
-	TargetUserType TargetUserType `json:"target_user_type"`
+	Guild               *Guild               `json:"guild"`
+	Channel             *Channel             `json:"channel"`
+	Inviter             *User                `json:"inviter"`
+	Code                string               `json:"code"`
+	CreatedAt           Timestamp            `json:"created_at"`
+	MaxAge              int                  `json:"max_age"`
+	Uses                int                  `json:"uses"`
+	MaxUses             int                  `json:"max_uses"`
+	Revoked             bool                 `json:"revoked"`
+	Temporary           bool                 `json:"temporary"`
+	Unique              bool                 `json:"unique"`
+	TargetUser          *User                `json:"target_user"`
+	TargetUserType      TargetUserType       `json:"target_user_type"`
+	TargetApplication   *Application         `json:"target_application"`
+	StageInstance       *InviteStageInstance `json:"stage_instance"`
+	GuildScheduledEvent *GuildScheduledEvent `json:"guild_scheduled_event"`
 
 	// will only be filled when using InviteWithCounts
 	ApproximatePresenceCount int `json:"approximate_presence_count"`
 	ApproximateMemberCount   int `json:"approximate_member_count"`
+
+	ExpiresAt Timestamp `json:"expires_at"`
 }
 
 // TargetUserType is the type of the target user
@@ -226,16 +231,16 @@ type ChannelType int
 
 // Block contains known ChannelType values
 const (
-	ChannelTypeGuildText      ChannelType = 0
-	ChannelTypeDM             ChannelType = 1
-	ChannelTypeGuildVoice     ChannelType = 2
-	ChannelTypeGroupDM        ChannelType = 3
-	ChannelTypeGuildCategory  ChannelType = 4
-	ChannelTypeGuildNews      ChannelType = 5
-	ChannelTypeGuildStore     ChannelType = 6
-	ChannelGuildNewsThread    ChannelType = 10
-	ChannelGuildPublicThread  ChannelType = 11
-	ChannelGuildPrivateThread ChannelType = 12
+	ChannelTypeGuildText          ChannelType = 0
+	ChannelTypeDM                 ChannelType = 1
+	ChannelTypeGuildVoice         ChannelType = 2
+	ChannelTypeGroupDM            ChannelType = 3
+	ChannelTypeGuildCategory      ChannelType = 4
+	ChannelTypeGuildNews          ChannelType = 5
+	ChannelTypeGuildStore         ChannelType = 6
+	ChannelTypeGuildNewsThread    ChannelType = 10
+	ChannelTypeGuildPublicThread  ChannelType = 11
+	ChannelTypeGuildPrivateThread ChannelType = 12
 )
 
 // A Channel holds all data related to an individual Discord channel.
@@ -354,18 +359,19 @@ type ThreadMetadata struct {
 	Archived bool `json:"archived"`
 
 	// The period of inactivity allowed before the channel automatically archives.
-	AutoArchiveDuration int `json:"auto_archive_duration"`
+	AutoArchiveDuration ArchiveDuration `json:"auto_archive_duration"`
 
-	// A timestamp of when the channel was archived.
+	// A timestamp of when the thread's archive status was last changed.
 	ArchiveTimestamp Timestamp `json:"archive_timestamp"`
 
 	// Whether the thread is locked.
 	Locked bool `json:"locked"`
 }
 
-// ArchiveDuration represents the increments of time at which a thread auto-archives, in seconds.
+// ArchiveDuration represents the increments of time at which a thread auto-archives, in minutes.
 type ArchiveDuration int
 
+// Defines the increments at which a thread archives due to inactivity.
 const (
 	ArchiveDuration1Hour ArchiveDuration = 60
 	ArchiveDuration1Day  ArchiveDuration = ArchiveDuration1Hour * 24
@@ -538,8 +544,8 @@ type Guild struct {
 	// to retrieve the icon itself.
 	Icon string `json:"icon"`
 
-	// The voice region of the guild.
-	Region string `json:"region"`
+	// The voice region of the guild. This is now rtc_regsion
+	Region string `json:"rtc_region"`
 
 	// The ID of the AFK voice channel.
 	AfkChannelID string `json:"afk_channel_id"`
@@ -606,6 +612,11 @@ type Guild struct {
 	// This field is only present in GUILD_CREATE events and websocket
 	// update events, and thus is only present in state-cached guilds.
 	Channels []*Channel `json:"channels"`
+
+	// A list of threads in the guild.
+	// This field is only present in GUILD_CREATE events and websocket
+	// update events, and thus is only present in state-cached guilds.
+	Threads []*Channel `json:"threads"`
 
 	// A list of voice states for the guild.
 	// This field is only present in GUILD_CREATE events and websocket
@@ -679,6 +690,9 @@ type Guild struct {
 
 	// Permissions of our user
 	Permissions int64 `json:"permissions,string"`
+
+	// A list of stickers present in the guild.
+	Stickers []*Sticker `json:"stickers"`
 }
 
 // A GuildPreview holds data related to a specific public Discord Guild, even if the user is not in the guild.
@@ -713,6 +727,121 @@ type GuildPreview struct {
 
 	// the description for the guild
 	Description string `json:"description"`
+}
+
+// StagePrivacyLevel is the privacy level of the stage.
+type StagePrivacyLevel int
+
+// Contains all known values for stage privacy level.
+const (
+	StagePrivacyPublic    StagePrivacyLevel = 1
+	StagePrivacyGuildOnly StagePrivacyLevel = 2
+)
+
+// StageInstance holds information about a live stage.
+type StageInstance struct {
+	ID                string            `json:"id"`
+	GuildID           string            `json:"guild_id"`
+	ChannelID         string            `json:"channel_id"`
+	Topic             string            `json:"topic"`
+	PrivacyLevel      StagePrivacyLevel `json:"privacy_level"`
+	DiscoveryDisabled bool              `json:"discovery_disabled"`
+}
+
+// InviteStageInstance holds stage information in an invite
+// https://discord.com/developers/docs/resources/invite#invite-stage-instance-object
+type InviteStageInstance struct {
+	// the members speaking in the Stage
+	Members []*Member `json:"members"`
+
+	// the number of users in the Stage
+	ParticipantCount int `json:"participant_count"`
+
+	// the number of users speaking in the Stage
+	SpeakerCount int `json:"speaker_count"`
+
+	// the topic of the Stage instance (1-120 characters)
+	Topic string `json:"topic"`
+}
+
+// GuildScheduledEvent is a scheduled event for a guild
+// https://discord.com/developers/docs/resources/guild-scheduled-event#guild-scheduled-event-object
+type GuildScheduledEvent struct {
+	// the id of the scheduled event
+	ID string `json:"id"`
+
+	// the guild id which the scheduled event belongs to
+	GuildID string `json:"guild_id"`
+
+	// the channel id in which the scheduled event will be hosted, or null if scheduled entity type is EXTERNAL
+	ChannelID string `json:"channel_id"`
+
+	// the id of the user that created the scheduled event
+	CreatorID string `json:"creator_id"`
+
+	// the name of the scheduled event (1-100 characters)
+	Name string `json:"name"`
+
+	// the description of the scheduled event (1-1000 characters)
+	Description string `json:"description"`
+
+	// the time the scheduled event will start
+	ScheduledStartTime Timestamp `json:"scheduled_start_time"`
+
+	// the time the scheduled event will end, required if entity_type is EXTERNAL
+	ScheduledEndTime Timestamp `json:"scheduled_end_time"`
+
+	// the privacy level of the scheduled event
+	PrivacyLevel GuildScheduledEventPrivacyLevel `json:"privacy_level"`
+
+	// the status of the scheduled event
+	Status GuildScheduledEventStatus `json:"status"`
+
+	// the type of the scheduled event
+	EntityType GuildScheduledEventEntityType `json:"entity_type"`
+
+	// the id of an entity associated with a guild scheduled event
+	EntityID string `json:"entity_id"`
+
+	// additional metadata for the guild scheduled event
+	EntityMetadata *GuildScheduledEventEntityMetadata `json:"entity_metadata"`
+
+	// the user that created the scheduled event
+	Creator *User `json:"creator"`
+
+	// the number of users subscribed to the scheduled event
+	UserCount int `json:"user_count"`
+}
+
+// https://discord.com/developers/docs/resources/guild-scheduled-event#guild-scheduled-event-object-guild-scheduled-event-privacy-level
+type GuildScheduledEventPrivacyLevel int
+
+const (
+	GuildScheduledEventPrivacyGuildOnly GuildScheduledEventPrivacyLevel = 2
+)
+
+// https://discord.com/developers/docs/resources/guild-scheduled-event#guild-scheduled-event-object-guild-scheduled-event-status
+type GuildScheduledEventStatus int
+
+const (
+	GuildScheduledEventStatusScheduled GuildScheduledEventStatus = 1
+	GuildScheduledEventStatusActive    GuildScheduledEventStatus = 2
+	GuildScheduledEventStatusCompleted GuildScheduledEventStatus = 3
+	GuildScheduledEventStatusCanceled  GuildScheduledEventStatus = 4
+)
+
+// https://discord.com/developers/docs/resources/guild-scheduled-event#guild-scheduled-event-object-guild-scheduled-event-entity-types
+type GuildScheduledEventEntityType int
+
+const (
+	GuildScheduledEventEntityStageInstance GuildScheduledEventEntityType = 1
+	GuildScheduledEventEntityVoice         GuildScheduledEventEntityType = 2
+	GuildScheduledEventEntityExternal      GuildScheduledEventEntityType = 3
+)
+
+// https://discord.com/developers/docs/resources/guild-scheduled-event#guild-scheduled-event-object-guild-scheduled-event-entity-types
+type GuildScheduledEventEntityMetadata struct {
+	Location string `json:"location"`
 }
 
 // MessageNotifications is the notification level for a guild

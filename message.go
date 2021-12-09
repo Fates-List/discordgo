@@ -146,6 +146,9 @@ type Message struct {
 	// The thread that was started from this message.
 	Thread *Channel `json:"thread"`
 
+	// If the message is a response to an Interaction, the interaction's application ID
+	ApplicationID string `json:"application_id"`
+
 	// An array of Sticker objects, if any were sent.
 	StickerItems []*Sticker `json:"sticker_items"`
 }
@@ -207,27 +210,48 @@ type File struct {
 	Reader      io.Reader
 }
 
-// StickerType is the file format of the Sticker.
+// StickerFormat is the file format of the Sticker.
+type StickerFormat int
+
+// Defines all known Sticker types.
+const (
+	StickerFormatTypePNG    StickerFormat = 1
+	StickerFormatTypeAPNG   StickerFormat = 2
+	StickerFormatTypeLottie StickerFormat = 3
+)
+
+// StickerType is the type of sticker.
 type StickerType int
 
+// Defines Sticker types.
 const (
-	StickerTypePNG    StickerType = 1
-	StickerTypeAPNG   StickerType = 2
-	StickerTypeLottie StickerType = 3
+	StickerTypeStandard StickerType = 1
+	StickerTypeGuild    StickerType = 2
 )
 
 // Sticker represents a sticker object that can be sent in a Message.
 type Sticker struct {
-	ID          string      `json:"id"`
-	PackID      *string     `json:"pack_id,omitempty"`
-	Name        string      `json:"name"`
-	Description string      `json:"description"`
-	Tags        string      `json:"tags"`
-	FormatType  StickerType `json:"format_type"`
-	Available   *bool       `json:"available,omitempty"`
-	GuildID     *string     `json:"guild_id,omitempty"`
-	User        *User       `json:"user,omitempty"`
-	SortValue   *int        `json:"sort_value,omitempty"`
+	ID          string        `json:"id"`
+	PackID      string        `json:"pack_id"`
+	Name        string        `json:"name"`
+	Description string        `json:"description"`
+	Tags        string        `json:"tags"`
+	FormatType  StickerFormat `json:"format_type"`
+	Available   bool          `json:"available"`
+	GuildID     string        `json:"guild_id"`
+	User        *User         `json:"user"`
+	SortValue   int           `json:"sort_value"`
+}
+
+// StickerPack represents a pack of standard stickers.
+type StickerPack struct {
+	ID             string    `json:"id"`
+	Stickers       []Sticker `json:"stickers"`
+	Name           string    `json:"name"`
+	SKUID          string    `json:"sku_id"`
+	CoverStickerID string    `json:"cover_sticker_id"`
+	Description    string    `json:"description"`
+	BannerAssetID  string    `json:"banner_asset_id"`
 }
 
 // MessageSend stores all parameters you can send with ChannelMessageSendComplex.

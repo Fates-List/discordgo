@@ -1920,8 +1920,8 @@ func buildFilter(f ThreadListFilter) (q string) {
 	return
 }
 
-// JoinThread joins the user to a thread.
-func (s *Session) JoinThread(channelID string) (err error) {
+// ThreadJoin joins the user to a thread.
+func (s *Session) ThreadJoin(channelID string) (err error) {
 
 	endpoint := EndpointChannelThread(channelID)
 
@@ -1929,9 +1929,9 @@ func (s *Session) JoinThread(channelID string) (err error) {
 	return
 }
 
-// AddThreadMember adds a member to a thread. Requires the ability to send messages in the thread, and that
+// ThreadMemberAdd adds a member to a thread. Requires the ability to send messages in the thread, and that
 // it is not archived.
-func (s *Session) AddThreadMember(channelID string, userID string) (err error) {
+func (s *Session) ThreadMemberAdd(channelID string, userID string) (err error) {
 
 	endpoint := EndpointChannelMember(channelID, userID)
 
@@ -1939,8 +1939,8 @@ func (s *Session) AddThreadMember(channelID string, userID string) (err error) {
 	return
 }
 
-// LeaveThread removes the user from a thread. This should only be called if the channel is not archived.
-func (s *Session) LeaveThread(channelID string) (err error) {
+// ThreadLeave removes the client from a thread. This should only be called if the channel is not archived.
+func (s *Session) ThreadLeave(channelID string) (err error) {
 
 	endpoint := EndpointChannelThread(channelID)
 
@@ -1948,9 +1948,34 @@ func (s *Session) LeaveThread(channelID string) (err error) {
 	return
 }
 
-// RemoveThreadMember removes a member from the thread. Requires the Manage Threads permission, or the creator of the
+// ThreadEdit updates an existing thread
+func (s *Session) ThreadEdit(channelID, name string, archived bool, locked bool, autoArchiveDuration ArchiveDuration) (c *Channel, err error) {
+
+	endpoint := EndpointChannel(channelID)
+	d := struct {
+		Name                string          `json:"name"`
+		Archived            bool            `json:"archived"`
+		Locked              bool            `json:"locked"`
+		AutoArchiveDuration ArchiveDuration `json:"auto_archive_duration"`
+	}{
+		name,
+		archived,
+		locked,
+		autoArchiveDuration,
+	}
+
+	b, err := s.RequestWithBucketID("PATCH", endpoint, d, endpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	err = unmarshal(b, &c)
+	return
+}
+
+// ThreadMemberRemove removes a member from the thread. Requires the Manage Threads permission, or the creator of the
 // thread, if the type is private.
-func (s *Session) RemoveThreadMember(channelID string, userID string) (err error) {
+func (s *Session) ThreadMemberRemove(channelID string, userID string) (err error) {
 
 	endpoint := EndpointChannelMember(channelID, userID)
 
@@ -1958,8 +1983,8 @@ func (s *Session) RemoveThreadMember(channelID string, userID string) (err error
 	return
 }
 
-// StartThreadWithMessage creates a thread in the channel ID given, using a message ID as the starting message in the thread.
-func (s *Session) StartThreadWithMessage(channelID, messageID, name string, autoArchiveDuration ArchiveDuration) (c *Channel, err error) {
+// ThreadStartWithMessage creates a thread in the channel ID given, using a message ID as the starting message in the thread.
+func (s *Session) ThreadStartWithMessage(channelID, messageID, name string, autoArchiveDuration ArchiveDuration) (c *Channel, err error) {
 
 	endpoint := EndpointChannelStartThreadWithMessage(channelID, messageID)
 	d := struct {
@@ -1979,10 +2004,10 @@ func (s *Session) StartThreadWithMessage(channelID, messageID, name string, auto
 	return
 }
 
-// StartThreadWithoutMessage creates a thread in the channel ID given, without needing a message.
+// ThreadStartWithoutMessage creates a thread in the channel ID given, without needing a message.
 // Private threads are available when using this. The default thread type is public.
-// News channels can NOT create private threads.
-func (s *Session) StartThreadWithoutMessage(channelID, name string, autoArchiveDuration ArchiveDuration, private bool) (c *Channel, err error) {
+// Private threads cannot be created from news channels
+func (s *Session) ThreadStartWithoutMessage(channelID, name string, autoArchiveDuration ArchiveDuration, private bool) (c *Channel, err error) {
 
 	endpoint := EndpointChannelStartThreadWithoutMessage(channelID)
 	d := struct {
@@ -1992,11 +2017,11 @@ func (s *Session) StartThreadWithoutMessage(channelID, name string, autoArchiveD
 	}{
 		name,
 		autoArchiveDuration,
-		ChannelGuildPublicThread,
+		ChannelTypeGuildPublicThread,
 	}
 
 	if private {
-		d.Type = ChannelGuildPrivateThread
+		d.Type = ChannelTypeGuildPublicThread
 	}
 
 	if d.AutoArchiveDuration == 0 {
@@ -2012,9 +2037,9 @@ func (s *Session) StartThreadWithoutMessage(channelID, name string, autoArchiveD
 	return
 }
 
-// ListThreadMembers lists all members of the thread as a slice of ThreadMember. Guild member intent is required
+// ThreadMembers lists all members of the thread as a slice of ThreadMember. Guild member intent is required
 // to call this path.
-func (s *Session) ListThreadMembers(channelID string) (t []*ThreadMember, err error) {
+func (s *Session) ThreadMembers(channelID string) (t []*ThreadMember, err error) {
 
 	endpoint := EndpointChannelListMembers(channelID)
 
@@ -2027,9 +2052,9 @@ func (s *Session) ListThreadMembers(channelID string) (t []*ThreadMember, err er
 	return
 }
 
-// ListActiveThreads lists all active threads in the channel, whether public or private.
+// ThreadsActive lists all active threads in the channel, whether public or private.
 // Ordered by ID, descending order.
-func (s *Session) ListActiveThreads(channelID string) (a *ThreadListResponse, err error) {
+func (s *Session) ThreadsActive(channelID string) (a *ThreadListResponse, err error) {
 
 	endpoint := EndpointChannelListActiveThreads(channelID)
 
@@ -2042,9 +2067,9 @@ func (s *Session) ListActiveThreads(channelID string) (a *ThreadListResponse, er
 	return
 }
 
-// ListPublicArchivedThreads lists all public threads that have been archived. Requires permission to view message
+// ThreadsPublicArchived lists all public threads that have been archived. Requires permission to view message
 // history.
-func (s *Session) ListPublicArchivedThreads(channelID string, f ThreadListFilter) (a *ThreadListResponse, err error) {
+func (s *Session) ThreadsPublicArchived(channelID string, f ThreadListFilter) (a *ThreadListResponse, err error) {
 
 	endpoint := EndpointChannelListPublicArchivedThreads(channelID) + buildFilter(f)
 
@@ -2057,9 +2082,9 @@ func (s *Session) ListPublicArchivedThreads(channelID string, f ThreadListFilter
 	return
 }
 
-// ListPrivateArchivedThreads lists all public threads that have been archived. Requires permission to view message
+// ThreadsPrivateArchived lists all public threads that have been archived. Requires permission to view message
 // history and manage threads.
-func (s *Session) ListPrivateArchivedThreads(channelID string, f ThreadListFilter) (a *ThreadListResponse, err error) {
+func (s *Session) ThreadsPrivateArchived(channelID string, f ThreadListFilter) (a *ThreadListResponse, err error) {
 	endpoint := EndpointChannelListPrivateArchivedThreads(channelID) + buildFilter(f)
 
 	b, err := s.RequestWithBucketID("GET", endpoint, nil, endpoint)
@@ -2071,9 +2096,9 @@ func (s *Session) ListPrivateArchivedThreads(channelID string, f ThreadListFilte
 	return
 }
 
-// ListJoinedPrivateArchivedThreads lists all private threads that the client has joined in the channel. Requires
+// ThreadsJoinedPrivateArchived lists all private threads that the client has joined in the channel. Requires
 // permission to read message history. Ordered by ID
-func (s *Session) ListJoinedPrivateArchivedThreads(channelID string, f ThreadListFilter) (a *ThreadListResponse, err error) {
+func (s *Session) ThreadsJoinedPrivateArchived(channelID string, f ThreadListFilter) (a *ThreadListResponse, err error) {
 
 	endpoint := EndpointChannelListJoinedPrivateArchivedThreads(channelID) + buildFilter(f)
 
@@ -2083,6 +2108,136 @@ func (s *Session) ListJoinedPrivateArchivedThreads(channelID string, f ThreadLis
 	}
 
 	err = unmarshal(b, &a)
+	return
+}
+
+// ------------------------------------------------------------------------------------------------
+// Functions specific to Stickers
+// ------------------------------------------------------------------------------------------------
+
+// Sticker returns a Sticker based on its id.
+func (s *Session) Sticker(sID string) (a *Sticker, err error) {
+
+	endpoint := EndpointSticker(sID)
+
+	b, err := s.RequestWithBucketID("GET", endpoint, nil, EndpointSticker(""))
+	if err != nil {
+		return nil, err
+	}
+
+	err = unmarshal(b, &a)
+	return
+}
+
+// StickerStandardNitroPacks gets the list of sticker packs available to premium users.
+func (s *Session) StickerStandardNitroPacks() (a *struct {
+	StickerPacks []StickerPack `json:"sticker_packs"`
+}, err error) {
+
+	endpoint := EndpointNitroStickerPacks
+
+	b, err := s.RequestWithBucketID("GET", endpoint, nil, EndpointStickers)
+	if err != nil {
+		return nil, err
+	}
+
+	err = unmarshal(b, &a)
+	return
+}
+
+// GuildStickers gets all stickers in a guild.
+func (s *Session) GuildStickers(gID string) (a *[]Sticker, err error) {
+
+	endpoint := EndpointGuildStickers(gID)
+
+	b, err := s.RequestWithBucketID("GET", endpoint, nil, EndpointGuildStickers(gID))
+	if err != nil {
+		return nil, err
+	}
+
+	err = unmarshal(b, &a)
+	return
+}
+
+// GuildSticker gets a sticker in a guild.
+func (s *Session) GuildSticker(gID, sID string) (a *Sticker, err error) {
+
+	endpoint := EndpointGuildSticker(gID, sID)
+
+	b, err := s.RequestWithBucketID("GET", endpoint, nil, EndpointGuildStickers(gID))
+	if err != nil {
+		return nil, err
+	}
+
+	err = unmarshal(b, &a)
+	return
+}
+
+// GuildStickerCreate creates a guild sticker. Image to use should be encoded as base64.
+func (s *Session) GuildStickerCreate(gID, image, name, description, tags string) (a *Sticker, err error) {
+
+	endpoint := EndpointGuildStickers(gID)
+
+	data := struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+
+		// The Discord name of an emoji. This will represent the sticker.
+		Tags string `json:"tags"`
+
+		File string `json:"file"`
+	}{
+		name,
+		description,
+		tags,
+		image,
+	}
+
+	b, err := s.RequestWithBucketID("POST", endpoint, data, EndpointGuildStickers(gID))
+	if err != nil {
+		return nil, err
+	}
+
+	err = unmarshal(b, &a)
+	return
+}
+
+// GuildStickerModify updates a guild sticker's information. Every field is optional.
+func (s *Session) GuildStickerModify(gID, sID, name, description, tags string) (a *Sticker, err error) {
+
+	endpoint := EndpointGuildSticker(gID, sID)
+
+	data := struct {
+		Name        string `json:"name,omitempty"`
+		Description string `json:"description,omitempty"`
+
+		// The Discord name of an emoji. This will represent the sticker.
+		Tags string `json:"tags,omitempty"`
+	}{
+		name,
+		description,
+		tags,
+	}
+
+	b, err := s.RequestWithBucketID("PATCH", endpoint, data, EndpointGuildStickers(gID))
+	if err != nil {
+		return nil, err
+	}
+
+	err = unmarshal(b, &a)
+	return
+}
+
+// GuildStickerDelete removes a sticker from a guild.
+func (s *Session) GuildStickerDelete(gID, sID string) (err error) {
+
+	endpoint := EndpointGuildSticker(gID, sID)
+
+	_, err = s.RequestWithBucketID("DELETE", endpoint, nil, EndpointGuildStickers(gID))
+	if err != nil {
+		return err
+	}
+
 	return
 }
 
@@ -2108,6 +2263,32 @@ func (s *Session) Invite(inviteID string) (st *Invite, err error) {
 func (s *Session) InviteWithCounts(inviteID string) (st *Invite, err error) {
 
 	body, err := s.RequestWithBucketID("GET", EndpointInvite(inviteID)+"?with_counts=true", nil, EndpointInvite(""))
+	if err != nil {
+		return
+	}
+
+	err = unmarshal(body, &st)
+	return
+}
+
+// InviteComplex returns an Invite, with the option to also include
+// the number of times it has been used and when it expires.
+func (s *Session) InviteComplex(inviteID string, withCounts, withExpiration bool) (st *Invite, err error) {
+
+	endpoint := EndpointInvite(inviteID)
+
+	v := url.Values{}
+	if withCounts {
+		v.Add("with_counts", "true")
+	}
+	if withExpiration {
+		v.Add("with_expiration", "true")
+	}
+	if len(v) > 0 {
+		endpoint = fmt.Sprintf("%s?%s", endpoint, v.Encode())
+	}
+
+	body, err := s.RequestWithBucketID("GET", endpoint, nil, EndpointInvite(""))
 	if err != nil {
 		return
 	}
