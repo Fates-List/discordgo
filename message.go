@@ -143,7 +143,7 @@ type Message struct {
 	// The message's response to an Interaction.
 	Interaction *Interaction `json:"interaction"`
 
-	// The thread that was started from this message.
+	// The thread that was started from this message. Includes the thread member object.
 	Thread *Channel `json:"thread"`
 
 	// If the message is a response to an Interaction, the interaction's application ID
@@ -201,6 +201,9 @@ const (
 	MessageFlagsSupressEmbeds        MessageFlags = 1 << 2
 	MessageFlagsSourceMessageDeleted MessageFlags = 1 << 3
 	MessageFlagsUrgent               MessageFlags = 1 << 4
+	MessageFlagsHasThread            MessageFlags = 1 << 5
+	MessageFlagsEphemeral            MessageFlags = 1 << 6
+	MessageFlagsLoading              MessageFlags = 1 << 7
 )
 
 // File stores info about files you e.g. send in messages.
