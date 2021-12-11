@@ -414,7 +414,14 @@ type ThreadCreateData struct {
 	// after recent activity.
 	AutoArchiveDuration ArchiveDuration `json:"auto_archive_duration"`
 
+	// The thread type
 	Type ChannelType `json:"type"`
+
+	// Whether or not the thread is invitable
+	Invitable bool `json:"invitable,omitempty"`
+
+	// How much time a user has to wait to type
+	RateLimitPerUser int `json:"rate_limit_per_user"`
 }
 
 // ThreadEditData is the data used to edit threads
