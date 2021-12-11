@@ -418,7 +418,7 @@ type ThreadCreateData struct {
 	Type ChannelType `json:"type"`
 
 	// Whether or not the thread is invitable
-	Invitable bool `json:"invitable,omitempty"`
+	Invitable bool `json:"invitable"`
 
 	// How much time a user has to wait to type
 	RateLimitPerUser int `json:"rate_limit_per_user"`
