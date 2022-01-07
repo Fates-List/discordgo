@@ -1582,6 +1582,7 @@ const (
 	PermissionManageThreads       = 0x0000000400000000
 	PermissionUsePublicThreads    = 0x0000000800000000
 	PermissionUsePrivateThreads   = 0x0000001000000000
+	PermissionModerateMembers     = 0x0000010000000000
 
 	PermissionAllText = PermissionViewChannel |
 		PermissionSendMessages |
@@ -1593,7 +1594,8 @@ const (
 		PermissionMentionEveryone |
 		PermissionUsePublicThreads |
 		PermissionUsePrivateThreads |
-		PermissionManageThreads
+		PermissionManageThreads |
+                PermissionModerateMembers
 	PermissionAllVoice = PermissionViewChannel |
 		PermissionVoiceConnect |
 		PermissionVoiceSpeak |
