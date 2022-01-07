@@ -909,6 +909,21 @@ func (s *Session) GuildMemberNickname(guildID, userID, nickname string) (err err
 	return
 }
 
+// GuildMemberTimeout times out a guild member
+ //  guildID   : The ID of a Guild.
+ //  userID    : The ID of a User.
+ //  until     : The timestamp for how long a member should be timed out.
+ //              Set to nil to remove timeout.
+ func (s *Session) GuildMemberTimeout(guildID string, userID string, until *time.Time) (err error) {
+ 	data := struct {
+ 		CommunicationDisabledUntil *time.Time `json:"communication_disabled_until"`
+ 	}{until}
+
+ 	_, err = s.RequestWithBucketID("PATCH", EndpointGuildMember(guildID, userID), data, EndpointGuildMember(guildID, ""))
+ 	return
+ }
+
+
 // GuildMemberMute server mutes a guild member
 //  guildID   : The ID of a Guild.
 //  userID    : The ID of a User.
