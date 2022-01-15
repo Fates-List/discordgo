@@ -961,6 +961,20 @@ func (s *Session) GuildMemberRoleAdd(guildID, userID, roleID string) (err error)
 	return
 }
 
+// GuildMemberRoleAdd adds the specified role to a given member
+//  guildID   : The ID of a Guild.
+//  userID    : The ID of a User.
+//  roleID 	  : The ID of a Role to be assigned to the user.
+func (s *Session) GuildMemberRoleAddWithReason(guildID, userID, roleID, reason string) (err error) {
+	var headers map[string]string = make(map[string]string)
+	if reason != "" {
+		headers["X-Audit-Log-Reason"] = reason
+	}
+	_, err = s.RequestWithBucketIDAndCustomHeaders("PUT", EndpointGuildMemberRole(guildID, userID, roleID), nil, EndpointGuildMemberRole(guildID, "", ""), headers)
+
+	return
+}
+
 // GuildMemberRoleRemove removes the specified role to a given member
 //  guildID   : The ID of a Guild.
 //  userID    : The ID of a User.
