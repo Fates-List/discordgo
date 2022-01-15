@@ -961,10 +961,11 @@ func (s *Session) GuildMemberRoleAdd(guildID, userID, roleID string) (err error)
 	return
 }
 
-// GuildMemberRoleAdd adds the specified role to a given member
+// GuildMemberRoleAddWithReason adds the specified role to a given member
 //  guildID   : The ID of a Guild.
 //  userID    : The ID of a User.
 //  roleID 	  : The ID of a Role to be assigned to the user.
+//  reason	  : The reason to add the role to this user.
 func (s *Session) GuildMemberRoleAddWithReason(guildID, userID, roleID, reason string) (err error) {
 	var headers map[string]string = make(map[string]string)
 	if reason != "" {
